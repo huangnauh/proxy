@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
@@ -169,7 +170,16 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 			if len(fields) != 1 {
 				continue
 			}
-			u.IgnoredSubDomains = append(u.IgnoredSubDomains, plugin.Host(fields[0]).Normalize())
+			splits := strings.Split(string(fields[0]), "/")
+			domain := ""
+			if len(splits) == 1 {
+				domain = splits[0]
+			} else if len(splits) == 3 {
+				domain = splits[1]
+			} else {
+				continue
+			}
+			u.IgnoredSubDomains = append(u.IgnoredSubDomains, plugin.Host(domain).Normalize())
 		}
 	case "spray":
 		u.Spray = &healthcheck.Spray{}
