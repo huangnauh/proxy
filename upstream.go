@@ -1,8 +1,11 @@
 package proxy
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -47,7 +50,8 @@ func NewStaticUpstream(c *caddyfile.Dispenser) (Upstream, error) {
 			FailTimeout: 5 * time.Second,
 			MaxFails:    3,
 		},
-		ex: newDNSEx(),
+		IgnoredSubDomains: make([]string, 0),
+		ex:                newDNSEx(),
 	}
 
 	if !c.Args(&upstream.from) {
@@ -143,9 +147,30 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 			return c.ArgErr()
 		}
 		for i := 0; i < len(ignoredDomains); i++ {
-			ignoredDomains[i] = plugin.Host(ignoredDomains[i]).Normalize()
+			u.IgnoredSubDomains = append(u.IgnoredSubDomains, plugin.Host(ignoredDomains[i]).Normalize())
 		}
-		u.IgnoredSubDomains = ignoredDomains
+	case "except_file":
+		args := c.RemainingArgs()
+		if len(args) != 1 {
+			return c.ArgErr()
+		}
+		f, err := os.Open(args[0])
+		if err != nil {
+			return err
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			if i := bytes.Index(line, []byte{'#'}); i >= 0 {
+				// Discard comments.
+				line = line[0:i]
+			}
+			fields := bytes.Fields(line)
+			if len(fields) != 1 {
+				continue
+			}
+			u.IgnoredSubDomains = append(u.IgnoredSubDomains, plugin.Host(fields[0]).Normalize())
+		}
 	case "spray":
 		u.Spray = &healthcheck.Spray{}
 	case "protocol":
