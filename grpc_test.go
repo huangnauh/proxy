@@ -8,7 +8,7 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/tls"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/coredns/coredns/request"
-	"github.com/coredns/proxy/healthcheck"
+	"github.com/huangnauh/proxy/healthcheck"
 
 	"github.com/miekg/dns"
 	"google.golang.org/grpc/grpclog"
